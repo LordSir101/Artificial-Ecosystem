@@ -44,7 +44,6 @@ public class GameView extends SurfaceView implements Runnable {
     private Random random;
     private Button highlightPlayerBtn,senseBtn;
     private boolean highlightPlayer = false, showVision = false;
-    private int timePassed = 0;
     long start, finish, timeElapsed, start2, finish2, timeElapsed2;
     int days = 0;
     int playerCrittersAlive;
@@ -56,7 +55,7 @@ public class GameView extends SurfaceView implements Runnable {
         this.screenY = screenY;
         food = new ArrayList<>();
 
-        //adjust size of critters based on scrren size using an arbitrary size as a baseline
+        //adjust size of critters based on screen size using an arbitrary size as a baseline
         screenRatioX = screenX / 1920f;
         screenRatioY = screenY / 1080f ;
 
@@ -87,6 +86,7 @@ public class GameView extends SurfaceView implements Runnable {
         highlightPlayerBtn.x = screenX - highlightPlayerBtn.getBitmap().getWidth() -10;
         highlightPlayerBtn.y = 10;
 
+        //create critter view toggle
         Bitmap btnImg2 = BitmapFactory.decodeResource(getResources(), R.drawable.eyball);
         senseBtn = new Button(btnImg2.getWidth(), btnImg2.getHeight(), btnImg2, 0.2f);
         senseBtn.x = screenX - highlightPlayerBtn.getBitmap().getWidth() - 10 - senseBtn.getBitmap().getWidth();
@@ -168,7 +168,6 @@ public class GameView extends SurfaceView implements Runnable {
         for(int i = critters.size() -1; i >= 0; i--){
             if(critters.get(i).color == 1){playerCrittersAlive++;}
 
-            //not sure why but collisions before move looks better
             critters.get(i).move();
             critters.get(i).checkCollisions(critters);
 
@@ -202,7 +201,6 @@ public class GameView extends SurfaceView implements Runnable {
             days++;
         }
 
-        //timePassed++;
     }
 
     public void draw(){
@@ -210,7 +208,6 @@ public class GameView extends SurfaceView implements Runnable {
             Canvas canvas = getHolder().lockCanvas(); //returns canvas being displayed on screen
 
             paint.setColor(Color.BLACK);
-            //paint.setStrokeWidth(3);
             paint.setStyle(Paint.Style.FILL);
 
             //draw background
@@ -258,12 +255,9 @@ public class GameView extends SurfaceView implements Runnable {
                 canvas.drawBitmap(critter.critter, critter.x - critter.width/2, critter.y - critter.height/2, paint);
                 canvas.restore();
 
-                /*
-                paint.setStyle(Paint.Style.STROKE);
-
-                paint.setColor(Color.WHITE);*/
             }
 
+            //draw buttons
             canvas.drawBitmap(highlightPlayerBtn.getBitmap(), highlightPlayerBtn.x, highlightPlayerBtn.y, paint);
             canvas.drawBitmap(senseBtn.getBitmap(), senseBtn.x, senseBtn.y, paint);
 
@@ -307,10 +301,14 @@ public class GameView extends SurfaceView implements Runnable {
 
         float x = event.getX();
         float y = event.getY();
+
+        //highlight players selected
         if (highlightPlayerBtn.getRect().contains(x, y) && event.getAction() == MotionEvent.ACTION_UP) //action up makes button less sensitive
         {
             highlightPlayer = !highlightPlayer;
         }
+
+        //show sight button selected
         if(senseBtn.getRect().contains(x, y) && event.getAction() == MotionEvent.ACTION_UP){
             showVision= !showVision;
         }

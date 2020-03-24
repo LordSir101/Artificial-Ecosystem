@@ -275,7 +275,7 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
-    //updates position on canvas to draw even size critter
+    //updates position on canvas to draw odd size critter
     public int[] updateOddPos(int partNum){
         int[] result = new int[2];
         switch(partNum){

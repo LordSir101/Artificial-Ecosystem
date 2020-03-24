@@ -28,31 +28,29 @@ breed costs energy per child
  */
 
 public class Species {
+    //critter stats
     public int size, speed, sense, breed, movement;
     public int x, y, width, height;
-    private float ratioX, ratioY;
-    Bitmap breedPart, speedPart, sensePart;
-    Bitmap critter;
-    Random random;
-    private int goalX, goalY;
-    private List<Point> path;
-    private int placeOnPath;
     public int color;
-    //private int isResting = 0;
     public float orientation = 0;
     private boolean isTurning = true;
     private float prevRot = 0;
     private float finalRotation;
+    private float prevRectRot = orientation;
+    private int goalX, goalY;
+    private List<Point> path;
+    private int placeOnPath;
     private boolean seesFood = false;
     public int energy = 150;
     public boolean hasCollided = false;
-    private int reboundCounter = 0;
-    public int isRebounding = 0;
-    //public boolean isRebounding = false;
-    private int prevX = Integer.MAX_VALUE, prevY = Integer.MAX_VALUE, stuckCounter;
+
+    //images
+    Bitmap breedPart, speedPart, sensePart;
+    Bitmap critter;
+
+    private float ratioX, ratioY;
+    Random random;
     public RectF rect;
-    private float prevRectRot = orientation;
-    private boolean isColliding = false;
 
 
     public Species(Resources res, int size, int speed, int sense, int breed, float screenRatioX, float screenRatioY, int color){
@@ -215,7 +213,7 @@ public class Species {
         return result;
     }
 
-    //updates position on canvas to draw even size critter
+    //updates position on canvas to draw odd size critter
     public int[] updateOddPos(int partNum){
         int[] result = new int[2];
         switch(partNum){
@@ -309,7 +307,6 @@ public class Species {
             if(!hasCollided){getGoal();}
             //the critter moves to the next point on their path multiplied by their speed
             placeOnPath += (movement);
-            //isIntersectingBefore = checkCollisions(GameView.critters); //check if was intersecting before moving
 
             //if they would go past the last point, they simply go to the last point instead
             if (placeOnPath > path.size() - 1) {
@@ -333,28 +330,24 @@ public class Species {
                 y = 0;
             }
             //when they finish their path, a new goal is set and if there is food, they eat it
-            if(placeOnPath == path.size() -1){
+            if(placeOnPath == path.size() -1) {
                 checkIfFoodEaten();
                 seesFood = false;
                 isTurning = true;
-                //isRebounding = 0;
 
                 //after colliding, a random goal is set to prevent clusters of critters
-                if(hasCollided){
-                    goalX = random.nextInt(GameView.screenX );
-                    goalY = random.nextInt(GameView.screenY );
+                if (hasCollided) {
+                    goalX = random.nextInt(GameView.screenX);
+                    goalY = random.nextInt(GameView.screenY);
 
                     getPath();
                     getRotationGoal();
-                    //movement = 2 * speed + 2;
                     hasCollided = false;
-                }
-                else{
+                } else {
                     getGoal();
                 }
 
             }
-            //checkIfStuck();
         }
         else{
             rotate();
@@ -494,149 +487,64 @@ public class Species {
         rect = getCritterRect();
         //Species collision = null;
         for (Species critter : critters) {
-            //RectF critterRect = critter.getCritterRect();
+
             if (critter == this) {
                 continue;
             }
             //check if there is a collision
             if (this.rect.intersect(critter.getCritterRect())) {
-                getReboundGoal(critter, 10000); //for decoupling
-                //System.out.print("decoupled");
-                getReboundGoal(critter, 80);//for actual rebound distance
+                getReboundGoal(critter, 1000); //this lets the critter move until it no longer intersects the other
+                getReboundGoal(critter, 80);//this makes the critter actually rebound
 
                 hasCollided = true;
 
-                //if this is larger than critter, the other critter will be set on a rebound path
-                /*
-                if (this.size > critter.size) {
-                    critter.hasCollided = true;
-
-                    //upper right
-                    if (this.x >= critter.x && this.y <= critter.y) {
-                        critter.goalX = critter.x - (int) (hyp * Math.cos(angle));
-                        critter.goalY = critter.y + (int) (hyp * Math.sin(angle));
-
-                    }
-                    //lower right
-                    else if (this.x >= critter.x && this.y >= critter.y) {
-                        critter.goalX = critter.x - (int) (hyp * Math.cos((angle)));
-                        critter.goalY = critter.y - (int) (hyp * Math.sin(angle));
-
-                    }
-                    //lower left
-                    else if (this.x <= critter.x && this.y >= critter.y) {
-                        critter.goalX = critter.x + (int) (hyp * Math.cos(angle));
-                        critter.goalY = critter.y - (int) (hyp * Math.sin(angle));
-
-                    } else if (this.x < critter.x && this.y <= critter.y) {
-                        critter.goalX = critter.x + (int) (hyp * Math.cos(angle));
-                        critter.goalY = critter.y + (int) (hyp * Math.sin(angle));
-
-                    }
-                    keepGoalInPlayArea();
-                    //critter.isTurning = false;
-                    critter.getPath();
-
-                    while (this.getCritterRect().intersect(critter.getCritterRect())) {
-                        critter.placeOnPath += 1;
-                        critter.x = critter.path.get(critter.placeOnPath).x;
-                        critter.y = critter.path.get(critter.placeOnPath).y;
-                    }
-
-                    //critter.hasCollided = true;
-                    //critter.isRebounding = true;
-                    //critter.isRebounding = this.speed;
-
-                    //critter.seesFood = false;
-                }*/
-                //the species will rebound because it is either smaller or got hit
-                /*
-                else {
-                    this.hasCollided = true;
-
-                    if (critter.x >= this.x && critter.y <= this.y) {
-                        goalX = x - (int) (hyp * Math.cos(angle));
-                        goalY = y + (int) (hyp * Math.sin(angle));
-
-                    } else if (critter.x >= this.x && critter.y >= this.y) {
-                        goalX = x - (int) (hyp * Math.cos(angle));
-                        goalY = y - (int) (hyp * Math.sin(angle));
-
-                    } else if (critter.x <= this.x && critter.y >= this.y) {
-                        goalX = x + (int) (hyp * Math.cos(angle));
-                        goalY = y - (int) (hyp * Math.sin(angle));
-
-                    } else if (critter.x <= this.x && critter.y <= this.y) {
-                        goalX = x - (int) (hyp * Math.cos(angle));
-                        goalY = y + (int) (hyp * Math.sin(angle));
-
-                    }
-                    //isTurning = false;
-                    keepGoalInPlayArea();
-                    getPath();
-                    //TODO figure out why this loop goes infinite
-
-                    while (this.getCritterRect().intersect(critter.getCritterRect())) {
-                        placeOnPath += 1;
-                        x = path.get(placeOnPath).x;
-                        y = path.get(placeOnPath).y;
-                    }
-
-                    //hasCollided = false;
-                    //isRebounding = true;
-                    //isRebounding = critter.speed;
-                    //seesFood = false;
-                }*/
-
             }
 
-            //isColliding = false;
         }
-            //return collision;
+
     }
 
     public void getReboundGoal(Species critter, int hyp){
-        //if this is larger than critter, the other critter will be set on a rebound path
+
         float angle = 45;
 
+        //if this is larger than critter, the other critter will be set on a rebound path
         if (this.size > critter.size) {
-            //critter.hasCollided = true;
+
             critter.setCollided();
 
             //upper right
             if (this.x >= critter.x && this.y <= critter.y) {
-                //critter.goalX = critter.x - (int) (hyp * Math.cos(angle));
-                //critter.goalY = critter.y + (int) (hyp * Math.sin(angle));
+
                 critter.setGoalX(critter.x - (int) (hyp * Math.cos(angle)));
                 critter.setGoalY(critter.y + (int) (hyp * Math.sin(angle)));
 
             }
             //lower right
             else if (this.x >= critter.x && this.y >= critter.y) {
-                //critter.goalX = critter.x - (int) (hyp * Math.cos((angle)));
-                //critter.goalY = critter.y - (int) (hyp * Math.sin(angle));
+
                 critter.setGoalX(critter.x - (int) (hyp * Math.cos(angle)));
                 critter.setGoalY(critter.y - (int) (hyp * Math.sin(angle)));
 
             }
             //lower left
             else if (this.x <= critter.x && this.y >= critter.y) {
-                //critter.goalX = critter.x + (int) (hyp * Math.cos(angle));
-                //critter.goalY = critter.y - (int) (hyp * Math.sin(angle));
+
                 critter.setGoalX(critter.x + (int) (hyp * Math.cos(angle)));
                 critter.setGoalY(critter.y - (int) (hyp * Math.sin(angle)));
 
-            } else if (this.x < critter.x && this.y <= critter.y) {
-                //critter.goalX = critter.x + (int) (hyp * Math.cos(angle));
-                //critter.goalY = critter.y + (int) (hyp * Math.sin(angle));
+            }
+            //upper left
+            else if (this.x < critter.x && this.y <= critter.y) {
+
                 critter.setGoalX(critter.x + (int) (hyp * Math.cos(angle)));
                 critter.setGoalY(critter.y + (int) (hyp * Math.sin(angle)));
 
             }
-            //keepGoalInPlayArea();
-            //critter.isTurning = false;
-            critter.getPath();
 
+            critter.getPath();//this path is the rebound that the critter will make
+
+            //moves the critter back until they no longer intersect so that the sprites do not clip
             while (this.getCritterRect().intersect(critter.getCritterRect())) {
                 critter.incPlaceOnPath();
                 critter.setX(critter.path.get(critter.placeOnPath).x);
@@ -647,27 +555,31 @@ public class Species {
         else {
             this.hasCollided = true;
 
+            //upper right
             if (critter.x >= this.x && critter.y <= this.y) {
                 goalX = x - (int) (hyp * Math.cos(angle));
                 goalY = y + (int) (hyp * Math.sin(angle));
 
-            } else if (critter.x >= this.x && critter.y >= this.y) {
+            }
+            //lower right
+            else if (critter.x >= this.x && critter.y >= this.y) {
                 goalX = x - (int) (hyp * Math.cos(angle));
                 goalY = y - (int) (hyp * Math.sin(angle));
 
-            } else if (critter.x <= this.x && critter.y >= this.y) {
+            }
+            //lower left
+            else if (critter.x <= this.x && critter.y >= this.y) {
                 goalX = x + (int) (hyp * Math.cos(angle));
                 goalY = y - (int) (hyp * Math.sin(angle));
 
             }
+            //upper left
             else if (critter.x <= this.x && critter.y <= this.y) {
                 goalX = x - (int) (hyp * Math.cos(angle));
                 goalY = y + (int) (hyp * Math.sin(angle));
 
             }
 
-            //keepGoalInPlayArea();
-            //critter.isTurning = false;
             getPath();
 
             while (this.getCritterRect().intersect(critter.getCritterRect())) {
@@ -678,111 +590,7 @@ public class Species {
         }
 
     }
-    public void setCollisionPosition(Species current, Species other){
 
-        int v1 = current.movement;
-        int m1 = current.size;
-        int v2 = other.movement;
-        int m2 = other.size;
-
-        int firstHalf = ((m1 - m2)/(m1 + m2))*v1;
-        int secondHalf = ((2 * m2)/(m1 + m2))*v2;
-        current.movement = firstHalf + secondHalf;
-
-        firstHalf = ((2 * m1)/(m1 + m2))*v1;
-        secondHalf = ((m2 - m1)/(m1 + m2))*v2;
-        other.movement = firstHalf + secondHalf;
-
-        float theta = 180 - current.orientation;
-        current.goalX = (int)(current.movement * Math.sin(theta));
-        current.goalY = (int)(current.movement * Math.cos(theta));
-
-        theta = 180 - other.orientation;
-        other.goalX = (int)(current.movement * Math.sin(theta));
-        other.goalY = (int)(current.movement * Math.cos(theta));
-
-
-        current.getPath();
-        other.getPath();
-        current.hasCollided = true;
-        other.hasCollided = true;
-
-    }
-/*
-    private void rebound(Species critter){
-
-        int hyp = 60;
-        int angle = 45;
-
-        if(this.size > critter.size){
-            critter.hasCollided = true;
-
-            //upper right
-            if(this.x >= critter.x && this.y <= critter.y){
-                critter.goalX = critter.x - (int) (hyp * Math.cos(angle));
-                critter.goalY = critter.y + (int) (hyp * Math.sin(angle));
-
-            }
-            //lower right
-            else if(this.x >= critter.x && this.y >= critter.y){
-                critter.goalX = critter.x - (int) (hyp * Math.cos((angle)));
-                critter.goalY = critter.y - (int) (hyp * Math.sin(angle));
-
-            }
-            //
-            else if(this.x <= critter.x && this.y >= critter.y){
-                critter.goalX = critter.x + (int) (hyp * Math.cos(angle));
-                critter.goalY = critter.y + (int) (hyp * Math.sin(angle));
-
-            }
-            else if(this.x < critter.x && this.y <= critter.y){
-                critter.goalX = critter.x + (int) (hyp * Math.cos(angle));
-                critter.goalY = critter.y - (int) (hyp * Math.sin(angle));
-
-            }
-            keepGoalInPlayArea();
-            //critter.isTurning = false;
-            critter.getPath();
-            //critter.hasCollided = false;
-            //critter.isRebounding = true;
-            critter.isRebounding = this.speed;
-
-            //critter.seesFood = false;
-        }
-        //the species will rebound because it is either smaller or got hit
-        else {
-            this.hasCollided = true;
-
-            if(critter.x >= this.x && critter.y <= this.y){
-                goalX = x - (int) (hyp * Math.cos(angle));
-                goalY = y + (int) (hyp * Math.sin(angle));
-
-            }
-            else if(critter.x >= this.x && critter.y >= this.y){
-                goalX = x - (int) (hyp * Math.cos(angle));
-                goalY = y - (int) (hyp * Math.sin(angle));
-
-            }
-            else if(critter.x <= this.x && critter.y >= this.y){
-                goalX = x + (int) (hyp * Math.cos(angle));
-                goalY = y + (int) (hyp * Math.sin(angle));
-
-            }
-            else if(critter.x <= this.x && critter.y <= this.y){
-                goalX = x + (int) (hyp * Math.cos(angle));
-                goalY = y - (int) (hyp * Math.sin(angle));
-
-            }
-            //isTurning = false;
-            keepGoalInPlayArea();
-            getPath();
-            //hasCollided = false;
-            //isRebounding = true;
-            isRebounding = critter.speed;
-            //seesFood = false;
-        }
-
-    }*/
 
     public void setPosition(List<Species> critters){
         x = random.nextInt(GameView.screenX);
@@ -792,36 +600,6 @@ public class Species {
             if(critter.getCritterRect().contains(x , y)){
                 setPosition(critters);
             }
-        }
-    }
-
-    //if critters get stuck, they will respawn somewhere new
-    private void checkIfStuck(){
-        if(prevX == x && prevY == y){
-            stuckCounter++;
-        }
-        if(stuckCounter > 60 * 5){
-            setPosition(GameView.critters);
-            stuckCounter = 0;
-        }
-
-        prevX = x;
-        prevY = y;
-
-    }
-
-    private void keepGoalInPlayArea(){
-        if(goalX > GameView.screenX){
-            goalX = GameView.screenX;
-        }
-        else if(goalX < 0){
-            goalX = 0;
-        }
-        if(goalY > GameView.screenY){
-            goalY = GameView.screenY;
-        }
-        else if(goalY < 0){
-            goalY = 0;
         }
     }
 

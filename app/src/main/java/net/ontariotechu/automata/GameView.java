@@ -10,6 +10,8 @@ import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.util.Log;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.SurfaceView;
 
@@ -29,16 +31,19 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 
-public class GameView extends SurfaceView implements Runnable {
+public class GameView extends SurfaceView implements Runnable, GestureDetector.OnGestureListener {
 
-    private final int startPop = 5;
-    private int startFood = 100;
+    private final int startPop = 7;
+    private int startFood = 200;
     private boolean isPlaying;
     private Thread thread;
     public static float screenRatioX, screenRatioY;
     private Species player;
     public static int screenX, screenY;
+    public static int borderX, borderY;
     private Paint paint;
+    private Canvas canvas;
+    private GestureDetector gd;
     public static List<Species> critters;
     public static List<Food> food;
     private Random random;
@@ -46,13 +51,22 @@ public class GameView extends SurfaceView implements Runnable {
     private boolean highlightPlayer = false, showVision = false;
     long start, finish, timeElapsed, start2, finish2, timeElapsed2;
     int days = 0;
-    int playerCrittersAlive;
+    int playerCrittersAlive, greenCrittersAlive, blueCrittersAlive, yellowCrittersAlive;
+    private float cameraX, cameraY;
 
     public GameView(GameActivity activity, int screenX, int screenY) {
         super(activity);
 
         this.screenX = screenX;
         this.screenY = screenY;
+        this.borderX = screenX + 1000;
+        this.borderY = screenY + 1000;
+
+        //center the camera
+        float extraX = borderX - screenX;
+        float extraY = borderY - screenY;
+        this.cameraX = -extraX/2;
+        this.cameraY = -extraY/2;
         food = new ArrayList<>();
 
         //adjust size of critters based on screen size using an arbitrary size as a baseline
@@ -93,6 +107,8 @@ public class GameView extends SurfaceView implements Runnable {
         senseBtn.y = 10;
 
         paint = new Paint();
+        canvas = getHolder().lockCanvas();
+        gd = new GestureDetector(this);
 
         generateRandomSpecies(3);
 
@@ -119,9 +135,9 @@ public class GameView extends SurfaceView implements Runnable {
                 Species species = new Species(getResources(), size,
                         speed, sense, breed,
                         screenRatioX, screenRatioY, color);
-
-                species.x = random.nextInt(screenX);
-                species.y = random.nextInt(screenY);
+                species.setPosition(critters);
+                //species.x = random.nextInt(screenX);
+                //species.y = random.nextInt(screenY);
                 critters.add(species);
             }
 
@@ -157,6 +173,10 @@ public class GameView extends SurfaceView implements Runnable {
 
     public void update() {
         playerCrittersAlive = 0;
+        greenCrittersAlive = 0;
+        blueCrittersAlive = 0;
+        yellowCrittersAlive = 0;
+
         finish = System.currentTimeMillis();
         timeElapsed = finish - start;
 
@@ -167,12 +187,18 @@ public class GameView extends SurfaceView implements Runnable {
         //move critters
         for(int i = critters.size() -1; i >= 0; i--){
             if(critters.get(i).color == 1){playerCrittersAlive++;}
+            else if(critters.get(i).color == 2){greenCrittersAlive++;}
+            else if(critters.get(i).color == 3){blueCrittersAlive++;}
+            else if(critters.get(i).color == 4){yellowCrittersAlive++;}
 
             critters.get(i).move();
             critters.get(i).checkCollisions(critters);
 
+
+
             //reduce energy approx every 1 second
             if(timeElapsed2 >= 1000){
+
                 critters.get(i).reduceEnergy();
                 reset = true;
 
@@ -191,13 +217,23 @@ public class GameView extends SurfaceView implements Runnable {
             }
         }
 
-        //add 30 food every 5 seconds
+        //add food every 5 seconds
         if(timeElapsed > 1000 * 5){
             for(int i = 0; i < startPop * 4; i++){
                 Food pellet = new Food(getResources());
                 food.add(pellet);
             }
             start = System.currentTimeMillis();
+            for(int i = critters.size() -1; i >= 0; i--) {
+                //each point in breed gives approx 1% extra chance to breed
+                int chance = random.nextInt(1000) - (10 * critters.get(i).breed);
+                //Log.d("chance", chance+"");
+
+                if (chance < 10) {
+                    critters.get(i).makeBaby(critters);
+                }
+            }
+            //Log.d("---", "--------------");
             days++;
         }
 
@@ -205,7 +241,7 @@ public class GameView extends SurfaceView implements Runnable {
 
     public void draw(){
         if(getHolder().getSurface().isValid()){
-            Canvas canvas = getHolder().lockCanvas(); //returns canvas being displayed on screen
+            canvas = getHolder().lockCanvas(); //returns canvas being displayed on screen
 
             paint.setColor(Color.BLACK);
             paint.setStyle(Paint.Style.FILL);
@@ -214,7 +250,7 @@ public class GameView extends SurfaceView implements Runnable {
             canvas.drawRect(0, 0, screenX, screenY, paint);
 
             for(Food food: food){
-                canvas.drawBitmap(food.food, food.x, food.y, paint);
+                canvas.drawBitmap(food.food, food.x + cameraX, food.y + cameraY, paint);
             }
 
             //critters and boxes are drawn with the critter's x and y positions in the center of the sprite
@@ -239,20 +275,21 @@ public class GameView extends SurfaceView implements Runnable {
                     if(highlightPlayer) {
                         //draw border around player species
                         canvas.save();
-                        canvas.rotate(critter.orientation, critter.x , critter.y);
-                        canvas.drawRect(critter.x - critter.width/2 -1, critter.y - critter.height/2 -1,
-                                critter.x + critter.width/2 + 1, critter.y + critter.height/2 + 1, paint);
+                        canvas.rotate(critter.orientation, critter.x + cameraX, critter.y + cameraY);
+                        //draw rect based of of center of critter and camera position
+                        canvas.drawRect(critter.x - critter.width/2 -1 + cameraX, critter.y - critter.height/2 -1 + cameraY,
+                                critter.x + critter.width/2 + 1 + cameraX, critter.y + critter.height/2 + 1 + cameraY, paint);
                         canvas.restore();
                     }
                     if(showVision){
-                        canvas.drawCircle(critter.x, critter.y, (critter.sense) * 50 + 150f, paint);
+                        canvas.drawCircle(critter.x + cameraX, critter.y + cameraY, (critter.sense) * 50 + 150f, paint);
                     }
                 }
 
                 //rotate and draw critter
                 canvas.save();
-                canvas.rotate(critter.orientation, critter.x , critter.y);
-                canvas.drawBitmap(critter.critter, critter.x - critter.width/2, critter.y - critter.height/2, paint);
+                canvas.rotate(critter.orientation, critter.x + cameraX , critter.y + cameraY);
+                canvas.drawBitmap(critter.critter, critter.x - critter.width/2 + cameraX, critter.y - critter.height/2 + cameraY, paint);
                 canvas.restore();
 
             }
@@ -265,16 +302,47 @@ public class GameView extends SurfaceView implements Runnable {
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(Color.WHITE);
             paint.setTextSize(40);
+            paint.setAlpha(100);
 
-            //display critters left
+            //text area
+            canvas.drawRect(screenX - 400, screenY - 250,
+                    screenX, screenY, paint);
+
+            //display red critters left
+            paint.setColor(Color.RED);
             String text = "Critters Alive: " + playerCrittersAlive + " / " + (critters.size());
             Rect bounds = new Rect();
             paint.getTextBounds(text, 0, text.length(), bounds);
             int height = bounds.height();
             int width = bounds.width();
-            canvas.drawText(text, screenX - width - 10, screenY - height - 10, paint);
+            canvas.drawText(text, screenX - width - 10, screenY - height, paint);
+
+            paint.setColor(Color.GREEN);
+            text = "Critters Alive: " + greenCrittersAlive + " / " + (critters.size());
+            bounds = new Rect();
+            paint.getTextBounds(text, 0, text.length(), bounds);
+            height = bounds.height();
+            width = bounds.width();
+            canvas.drawText(text, screenX - width - 10, screenY - height - 50, paint);
+
+            paint.setColor(Color.BLUE);
+            text = "Critters Alive: " + blueCrittersAlive + " / " + (critters.size());
+            bounds = new Rect();
+            paint.getTextBounds(text, 0, text.length(), bounds);
+            height = bounds.height();
+            width = bounds.width();
+            canvas.drawText(text, screenX - width - 10, screenY - height - 100, paint);
+
+            paint.setColor(Color.YELLOW);
+            text = "Critters Alive: " + yellowCrittersAlive + " / " + (critters.size());
+            bounds = new Rect();
+            paint.getTextBounds(text, 0, text.length(), bounds);
+            height = bounds.height();
+            width = bounds.width();
+            canvas.drawText(text, screenX - width - 10, screenY - height - 150, paint);
 
             //display days
+            paint.setColor(Color.WHITE);
             text = "Day: " + days;
             paint.getTextBounds(text, 0, text.length(), bounds);
             height = bounds.height();
@@ -298,7 +366,7 @@ public class GameView extends SurfaceView implements Runnable {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-
+        gd.onTouchEvent(event);
         float x = event.getX();
         float y = event.getY();
 
@@ -313,6 +381,56 @@ public class GameView extends SurfaceView implements Runnable {
             showVision= !showVision;
         }
         return true;
+    }
+
+    @Override
+    public boolean onDown(MotionEvent e) {
+        return false;
+    }
+
+    @Override
+    public void onShowPress(MotionEvent e) {
+
+    }
+
+    @Override
+    public boolean onSingleTapUp(MotionEvent e) {
+        return false;
+    }
+
+    @Override
+    public boolean onScroll(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+        float distX = e2.getX() - e1.getX();
+        float distY = e2.getY() - e1.getY();
+
+        cameraX += distX /20;
+        cameraY += distY /20;
+
+        //set camera limits
+        if(cameraX > 0){
+            cameraX = 0;
+        }
+        if(cameraX < -(borderX - screenX)){
+            cameraX = -(borderX - screenX);
+        }
+        if(cameraY > 0){
+            cameraY = 0;
+        }
+        if(cameraY < -(borderY - screenY)){
+            cameraY = -(borderY - screenY);
+        }
+        //canvas.translate(distX, distY);
+        return true;
+    }
+
+    @Override
+    public void onLongPress(MotionEvent e) {
+
+    }
+
+    @Override
+    public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+        return false;
     }
 
 }

@@ -32,6 +32,7 @@ public class Species {
     public int size, speed, sense, breed, movement;
     public int x, y, width, height;
     public int color;
+    private Resources res;
     public float orientation = 0;
     private boolean isTurning = true;
     private float prevRot = 0;
@@ -54,6 +55,7 @@ public class Species {
 
 
     public Species(Resources res, int size, int speed, int sense, int breed, float screenRatioX, float screenRatioY, int color){
+        this.res = res;
         this.size = size;
         this.sense = sense;
         this.breed = breed;
@@ -82,8 +84,8 @@ public class Species {
         random = new Random();
 
         //random starting position
-        x = random.nextInt(GameView.screenX);
-        y = random.nextInt(GameView.screenY);
+        x = random.nextInt(GameView.borderX);
+        y = random.nextInt(GameView.borderY);
 
         rect = getCritterRect();
         getGoal();
@@ -317,14 +319,14 @@ public class Species {
             y = path.get(placeOnPath).y;
 
 
-            if(x > GameView.screenX){
-                x = GameView.screenX;
+            if(x > GameView.borderX){
+                x = GameView.borderX;
             }
             else if(x < 0){
                 x = 0;
             }
-            if(y > GameView.screenY){
-                y = GameView.screenY;
+            if(y > GameView.borderY){
+                y = GameView.borderY;
             }
             else if(y < 0){
                 y = 0;
@@ -337,8 +339,8 @@ public class Species {
 
                 //after colliding, a random goal is set to prevent clusters of critters
                 if (hasCollided) {
-                    goalX = random.nextInt(GameView.screenX);
-                    goalY = random.nextInt(GameView.screenY);
+                    goalX = random.nextInt(GameView.borderX);
+                    goalY = random.nextInt(GameView.borderY);
 
                     getPath();
                     getRotationGoal();
@@ -388,8 +390,8 @@ public class Species {
             }
         }
         if(!seesFood && isTurning){ //only get a new goal if it is not moving
-            goalX = random.nextInt(GameView.screenX);
-            goalY = random.nextInt(GameView.screenY );
+            goalX = random.nextInt(GameView.borderX);
+            goalY = random.nextInt(GameView.borderY);
             getPath();
             getRotationGoal();
         }
@@ -593,14 +595,22 @@ public class Species {
 
 
     public void setPosition(List<Species> critters){
-        x = random.nextInt(GameView.screenX);
-        y = random.nextInt(GameView.screenY);
+        x = random.nextInt(GameView.borderX);
+        y = random.nextInt(GameView.borderY);
 
         for(Species critter : critters){
             if(critter.getCritterRect().contains(x , y)){
                 setPosition(critters);
             }
         }
+    }
+
+    public void makeBaby(List<Species> critters){
+        Species baby = new Species(this.res, this.size, this.speed, this.sense, this.breed, this.ratioX, this.ratioY, this.color);
+        baby.x = this.x;
+        baby.y = this.y;
+        this.energy -= 150;
+        critters.add(baby);
     }
 
     //setter methods for collisions

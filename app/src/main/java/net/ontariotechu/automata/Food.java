@@ -15,8 +15,8 @@ public class Food {
     public boolean isEaten = false;
 
     public Food(Resources res){
-        x = random.nextInt(GameView.screenX);
-        y = random.nextInt(GameView.screenY);
+        x = random.nextInt(GameView.borderX);
+        y = random.nextInt(GameView.borderY);
         energy = 150;
 
         food = BitmapFactory.decodeResource(res, R.drawable.food);
